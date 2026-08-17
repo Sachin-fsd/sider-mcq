@@ -1,0 +1,5 @@
+groq
+image
+mss
+Pillow
+pyautogui  # For Windows

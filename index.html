@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>ScreenSum - MCQ Solver</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div class="header">
+        <img src="assets/icon.png" alt="ScreenSum" class="logo" />
+        <h1>ScreenSum</h1>
+        <p>Press <kbd>Shift</kbd> + <kbd>A</kbd> to solve MCQs</p>
+      </div>
+
+      <div id="settings-panel" class="panel">
+        <h2>🔑 Setup</h2>
+        <p>Enter your Groq API key to get started.</p>
+        <div class="form-group">
+          <label for="api-key">API Key:</label>
+          <input
+            type="password"
+            id="api-key"
+            placeholder="gsk_xxxxxxxxxxxxxxxxxxxx"
+          />
+          <button id="save-key-btn">Save</button>
+        </div>
+        <div class="form-group">
+          <label for="model-select">Model:</label>
+          <select id="model-select">
+            <option value="qwen/qwen3.6-27b">Qwen 3.6 27B</option>
+            <option value="meta-llama/llama-4-scout-17b-16e-instruct">
+              Llama 4 Scout 17B (Faster)
+            </option>
+            <option value="meta-llama/llama-4-maverick-17b-128e-instruct">
+              Llama 4 Maverick 17B (Fastest)
+            </option>
+          </select>
+        </div>
+        <div class="info-box">
+          <p>
+            💡 Get your API key at:
+            <a href="https://console.groq.com/keys" target="_blank"
+              >console.groq.com/keys</a
+            >
+          </p>
+        </div>
+      </div>
+
+      <div id="status-panel" class="panel hidden">
+        <h2>📊 Status</h2>
+        <div id="status-message">Ready</div>
+        <div id="result-area" class="hidden">
+          <h3>✅ Answer:</h3>
+          <div id="answer-display" class="answer-box">-</div>
+          <button id="close-result-btn">Close</button>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>ScreenSum v1.0 • Powered by Groq AI</p>
+      </div>
+    </div>
+    <script src="renderer.js"></script>
+  </body>
+</html>
