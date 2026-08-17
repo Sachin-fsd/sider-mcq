@@ -1,7 +1,7 @@
 {
   "name": "screensum-electron",
-  "version": "1.0.0",
-  "description": "MCQ Solver with AI - Press Ctrl+Shift+A to solve",
+  "version": "1.1.0",
+  "description": "MCQ Solver with AI - Multi-Key Rotation Support",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -23,7 +23,8 @@
       "**/*",
       "!python",
       "!venv",
-      "!dist"
+      "!dist",
+      "!release"
     ],
     "extraResources": [
       {
@@ -34,6 +35,18 @@
     "win": {
       "target": "nsis",
       "icon": "assets/icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
     }
   },
   "dependencies": {

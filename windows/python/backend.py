@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ScreenSum Python Backend - Modified to work with Electron
+ScreenSum Python Backend - Multi-API Key Rotation Support
 """
 import base64
 import io
@@ -22,6 +22,65 @@ from groq import Groq
 # Default settings
 MAX_WIDTH = 800
 VISION_MODEL = "qwen/qwen3.6-27b"
+REQUESTS_PER_KEY = 10  # Number of requests before switching API key
+
+# File to track API key usage
+USAGE_FILE = Path(os.path.expanduser("~/.screensum_usage.json"))
+
+
+def load_usage_data():
+    """Load API key usage data from file"""
+    if USAGE_FILE.exists():
+        try:
+            with open(USAGE_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return {"current_index": 0, "request_count": 0, "total_requests": 0}
+    return {"current_index": 0, "request_count": 0, "total_requests": 0}
+
+
+def save_usage_data(data):
+    """Save API key usage data to file"""
+    try:
+        USAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(USAGE_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        print(f"Warning: Could not save usage data: {e}", file=sys.stderr)
+
+
+def get_next_api_key(api_keys):
+    """Get the next API key based on rotation"""
+    if not api_keys:
+        return None
+    
+    usage = load_usage_data()
+    
+    # Check if we need to rotate
+    if usage["request_count"] >= REQUESTS_PER_KEY:
+        # Move to next key
+        usage["current_index"] = (usage["current_index"] + 1) % len(api_keys)
+        usage["request_count"] = 0
+        save_usage_data(usage)
+        print(f"🔄 Rotating to API key #{usage['current_index'] + 1}", file=sys.stderr)
+    
+    # Get the current key
+    current_key = api_keys[usage["current_index"]]
+    
+    # Increment request count
+    usage["request_count"] += 1
+    usage["total_requests"] += 1
+    save_usage_data(usage)
+    
+    print(f"📊 Using API key #{usage['current_index'] + 1} (Request #{usage['request_count']}/{REQUESTS_PER_KEY}, Total: {usage['total_requests']})", file=sys.stderr)
+    
+    return current_key
+
+
+def reset_api_usage():
+    """Reset the API usage counter (for testing)"""
+    save_usage_data({"current_index": 0, "request_count": 0, "total_requests": 0})
+    print("🔄 API usage counter reset", file=sys.stderr)
 
 
 def move_mouse(x, y):
@@ -150,17 +209,33 @@ def parse_response(response):
 def main():
     try:
         parser = argparse.ArgumentParser()
-        parser.add_argument('--api-key', required=True, help='Groq API key')
+        parser.add_argument('--api-key', required=True, help='Groq API key (comma-separated for multiple keys)')
+        parser.add_argument('--reset-usage', action='store_true', help='Reset API usage counter')
         args = parser.parse_args()
+        
+        # Handle reset flag
+        if args.reset_usage:
+            reset_api_usage()
+            print("✅ Usage counter reset. Exiting.")
+            sys.exit(0)
+        
+        # Parse API keys (comma-separated)
+        api_keys = [key.strip() for key in args.api_key.split(',') if key.strip()]
+        
+        if not api_keys:
+            print("ERROR: No valid API keys provided", file=sys.stderr)
+            sys.exit(1)
+        
+        print(f"🔑 Loaded {len(api_keys)} API keys", file=sys.stderr)
         
         print("DEBUG: Arguments parsed successfully", file=sys.stderr)
         
-        # Validate API key
-        if not args.api_key or len(args.api_key.strip()) == 0:
-            print("ERROR: API key is empty", file=sys.stderr)
-            sys.exit(1)
+        # Get the next API key based on rotation
+        current_api_key = get_next_api_key(api_keys)
         
-        print("DEBUG: API key received", file=sys.stderr)
+        if not current_api_key:
+            print("ERROR: Could not get API key", file=sys.stderr)
+            sys.exit(1)
         
         # Capture screen
         print("CAPTURING", file=sys.stderr)
@@ -174,7 +249,7 @@ def main():
         # Get answer from AI
         print("ANALYZING", file=sys.stderr)
         try:
-            response = summarize_screen(image_b64, args.api_key)
+            response = summarize_screen(image_b64, current_api_key)
             print("DEBUG: AI response received", file=sys.stderr)
         except Exception as e:
             print(f"ERROR: Failed to analyze screen: {e}", file=sys.stderr)
