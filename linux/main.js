@@ -74,7 +74,7 @@ async function initializeStore() {
 
         store = new Store({
             defaults: {
-                apiKey: '',
+                apiKeys: [], // Changed from apiKey to apiKeys array
                 model: 'qwen/qwen3.6-27b',
             },
         });
@@ -88,8 +88,8 @@ async function initializeStore() {
 
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 600,
-        height: 500,
+        width: 650,
+        height: 600,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
@@ -108,13 +108,14 @@ function createWindow() {
         );
     });
 
-    // Show window only if API key is not set
-    const apiKey = store.get('apiKey');
+    // Show window only if no API keys are set
+    const apiKeys = store.get('apiKeys', []);
+    const hasApiKeys = apiKeys && apiKeys.length > 0;
 
-    if (!apiKey) {
+    if (!hasApiKeys) {
         mainWindow.show();
     } else {
-        // Minimize to tray if API key exists
+        // Minimize to tray if API keys exist
         mainWindow.hide();
         createTray();
     }
@@ -198,9 +199,9 @@ function registerGlobalHotkey() {
                 return;
             }
 
-            const apiKey = store.get('apiKey');
+            const apiKeys = store.get('apiKeys', []);
 
-            if (!apiKey) {
+            if (!apiKeys || apiKeys.length === 0) {
                 if (mainWindow) {
                     mainWindow.show();
                     mainWindow.focus();
@@ -209,7 +210,7 @@ function registerGlobalHotkey() {
 
                 showNotification(
                     'ScreenSum',
-                    'Please set your Groq API key in settings'
+                    'Please set at least one Groq API key in settings'
                 );
 
                 return;
@@ -230,7 +231,8 @@ function registerGlobalHotkey() {
                 });
             }
 
-            runPythonBackend(apiKey);
+            // Pass all API keys to Python backend
+            runPythonBackend(apiKeys);
         }
     );
 
@@ -241,20 +243,24 @@ function registerGlobalHotkey() {
     }
 }
 
-function runPythonBackend(apiKey) {
+function runPythonBackend(apiKeys) {
     if (pythonProcess) {
         log.info('Python process is already running');
         return;
     }
 
+    // Join API keys with comma
+    const apiKeysString = apiKeys.join(',');
+
     const pythonArgs = [
         pythonScriptPath,
         '--api-key',
-        apiKey,
+        apiKeysString,
     ];
 
     log.info('Starting Python backend...');
     log.info('Command:', pythonExecutable, pythonArgs);
+    log.info(`Using ${apiKeys.length} API keys with rotation`);
 
     try {
         pythonProcess = spawn(
@@ -411,15 +417,40 @@ function showNotification(title, body) {
 // IPC HANDLERS
 // =========================
 
-ipcMain.handle('save-api-key', async (event, apiKey) => {
+// Save multiple API keys
+ipcMain.handle('save-api-keys', async (event, apiKeys) => {
     try {
-        if (typeof apiKey !== 'string') {
-            throw new Error('Invalid API key');
+        if (!Array.isArray(apiKeys)) {
+            throw new Error('Invalid API keys array');
         }
 
-        store.set('apiKey', apiKey.trim());
+        // Filter out empty strings and trim
+        const validKeys = apiKeys
+            .map(key => key.trim())
+            .filter(key => key.length > 0);
 
-        log.info('API key saved');
+        if (validKeys.length === 0) {
+            throw new Error('At least one valid API key is required');
+        }
+
+        store.set('apiKeys', validKeys);
+        store.set('apiKeyCount', validKeys.length);
+
+        log.info(`Saved ${validKeys.length} API keys`);
+
+        // Reset usage counter when keys are updated
+        const usageFilePath = path.join(
+            process.env.HOME || process.env.USERPROFILE,
+            '.screensum_usage.json'
+        );
+        try {
+            if (fs.existsSync(usageFilePath)) {
+                fs.unlinkSync(usageFilePath);
+                log.info('Reset API usage counter');
+            }
+        } catch (e) {
+            log.warn('Could not reset usage counter:', e);
+        }
 
         if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.hide();
@@ -429,9 +460,10 @@ ipcMain.handle('save-api-key', async (event, apiKey) => {
 
         return {
             success: true,
+            count: validKeys.length,
         };
     } catch (error) {
-        log.error('Failed to save API key:', error);
+        log.error('Failed to save API keys:', error);
 
         return {
             success: false,
@@ -440,9 +472,21 @@ ipcMain.handle('save-api-key', async (event, apiKey) => {
     }
 });
 
-ipcMain.handle('get-api-key', () => {
+// Get saved API keys
+ipcMain.handle('get-api-keys', () => {
     try {
-        return store.get('apiKey', '');
+        return store.get('apiKeys', []);
+    } catch (error) {
+        log.error('Failed to get API keys:', error);
+        return [];
+    }
+});
+
+ipcMain.handle('get-api-key', () => {
+    // Legacy support - returns first key or empty string
+    try {
+        const keys = store.get('apiKeys', []);
+        return keys.length > 0 ? keys[0] : '';
     } catch (error) {
         log.error('Failed to get API key:', error);
         return '';
@@ -452,7 +496,7 @@ ipcMain.handle('get-api-key', () => {
 ipcMain.handle('get-settings', () => {
     try {
         return {
-            apiKey: store.get('apiKey', ''),
+            apiKeys: store.get('apiKeys', []),
             model: store.get(
                 'model',
                 'qwen/qwen3.6-27b'
@@ -462,7 +506,7 @@ ipcMain.handle('get-settings', () => {
         log.error('Failed to get settings:', error);
 
         return {
-            apiKey: '',
+            apiKeys: [],
             model: 'qwen/qwen3.6-27b',
         };
     }
@@ -470,8 +514,11 @@ ipcMain.handle('get-settings', () => {
 
 ipcMain.handle('save-settings', (event, settings) => {
     try {
-        if (settings?.apiKey !== undefined) {
-            store.set('apiKey', String(settings.apiKey).trim());
+        if (settings?.apiKeys !== undefined && Array.isArray(settings.apiKeys)) {
+            const validKeys = settings.apiKeys
+                .map(key => String(key).trim())
+                .filter(key => key.length > 0);
+            store.set('apiKeys', validKeys);
         }
 
         if (settings?.model !== undefined) {
