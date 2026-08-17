@@ -24,7 +24,7 @@ function addKeyInput(value = '') {
     row.className = 'api-key-row';
 
     const input = document.createElement('input');
-    input.type = 'password';
+    input.type = 'text';
     input.className = 'api-key-input';
     input.placeholder = 'gsk_xxxxxxxxxxxxxxxxxxxx';
     input.value = value;
