@@ -43,7 +43,7 @@ An Electron app that uses AI to solve MCQ questions by analyzing screen captures
 
 ```bash
 # Navigate to project folder
-cd c:\Users\shravan\Desktop\sider-mcq
+cd c:\Users\your name\Desktop\sider-mcq
 ```
 
 #### Step 2: Create Virtual Environment
@@ -116,7 +116,7 @@ The app will open. Set your API key and press `Shift + A` on an MCQ screen to te
 
 ```powershell
 # 1. Navigate to project
-cd c:\Users\shravan\Desktop\sider-mcq
+cd c:\Users\your name\Desktop\sider-mcq
 
 # 2. Activate virtual environment
 venv\Scripts\activate
@@ -157,7 +157,7 @@ This .exe can be installed and run on **any Windows PC without Python or depende
 **Solution:**
 
 - Make sure `dist/backend.exe` exists before running `npm run dist:win`
-- Check with: `Test-Path c:\Users\shravan\Desktop\sider-mcq\dist\backend.exe`
+- Check with: `Test-Path c:\Users\your name\Desktop\sider-mcq\dist\backend.exe`
 - If missing, rebuild with PyInstaller: `pyinstaller --onefile --windowed --name backend python/backend.py`
 
 ### Error: "Python process exited with code -4058"
