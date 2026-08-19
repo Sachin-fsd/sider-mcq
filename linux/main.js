@@ -31,25 +31,36 @@ let pythonExecutable = 'python3';
 // Check if running in development or production
 function setupPythonPaths() {
     if (app.isPackaged) {
-        // Production: Python backend is inside resources
-        pythonScriptPath = path.join(
+        // Production: look for a bundled backend executable first (produced by PyInstaller)
+        const bundledBackend = path.join(
             process.resourcesPath,
             'python',
-            'backend.py'
+            process.platform === 'win32' ? 'backend.exe' : 'backend'
         );
 
-        const bundledPython = path.join(
-            process.resourcesPath,
-            'python',
-            process.platform === 'win32' ? 'python.exe' : 'python3'
-        );
-
-        if (process.platform === 'win32') {
-            // On Windows assume a bundled python.exe if present
-            pythonExecutable = bundledPython;
+        if (fs.existsSync(bundledBackend)) {
+            // Use the bundled standalone backend executable
+            pythonExecutable = bundledBackend;
+            pythonScriptPath = '';
         } else {
-            // On Linux/macOS prefer bundled python3, but fall back to system `python3`
-            pythonExecutable = fs.existsSync(bundledPython) ? bundledPython : 'python3';
+            // Fallback: include raw Python script and a bundled python interpreter if present
+            pythonScriptPath = path.join(
+                process.resourcesPath,
+                'python',
+                'backend.py'
+            );
+
+            const bundledPython = path.join(
+                process.resourcesPath,
+                'python',
+                process.platform === 'win32' ? 'python.exe' : 'python3'
+            );
+
+            if (process.platform === 'win32') {
+                pythonExecutable = bundledPython;
+            } else {
+                pythonExecutable = fs.existsSync(bundledPython) ? bundledPython : 'python3';
+            }
         }
     } else {
         // Development
@@ -249,14 +260,43 @@ function runPythonBackend(apiKeys) {
         return;
     }
 
-    // Join API keys with comma
-    const apiKeysString = apiKeys.join(',');
+    // Use one API key per request and cycle through keys on each invocation.
+    if (!apiKeys || apiKeys.length === 0) {
+        log.error('No API keys provided to runPythonBackend');
+        showNotification('ScreenSum', '❌ No API keys available');
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('processing-status', {
+                status: 'error',
+                error: 'No API keys available',
+            });
+        }
+        return;
+    }
 
-    const pythonArgs = [
-        pythonScriptPath,
-        '--api-key',
-        apiKeysString,
-    ];
+    // Determine which key to use from the persistent index
+    let keyIndex = 0;
+    try {
+        keyIndex = parseInt(store.get('apiKeyIndex', 0) || 0, 10) % apiKeys.length;
+        if (Number.isNaN(keyIndex)) keyIndex = 0;
+    } catch (e) {
+        keyIndex = 0;
+    }
+
+    const chosenKey = apiKeys[keyIndex];
+
+    // Persist next index for rotation
+    try {
+        store.set('apiKeyIndex', (keyIndex + 1) % apiKeys.length);
+    } catch (e) {
+        log.warn('Failed to persist apiKeyIndex:', e);
+    }
+
+    // Build python arguments to pass a single API key
+    const pythonArgs = [];
+    if (pythonScriptPath && pythonScriptPath.length > 0) {
+        pythonArgs.push(pythonScriptPath);
+    }
+    pythonArgs.push('--api-key', chosenKey);
 
     log.info('Starting Python backend...');
     log.info('Command:', pythonExecutable, pythonArgs);
@@ -435,6 +475,8 @@ ipcMain.handle('save-api-keys', async (event, apiKeys) => {
 
         store.set('apiKeys', validKeys);
         store.set('apiKeyCount', validKeys.length);
+        // Reset rotation index so cycling starts from the first key
+        store.set('apiKeyIndex', 0);
 
         log.info(`Saved ${validKeys.length} API keys`);
 

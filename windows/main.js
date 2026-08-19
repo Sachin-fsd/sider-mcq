@@ -227,20 +227,47 @@ function runPythonBackend(apiKeys) {
         return;
     }
 
-    // Join API keys with comma
-    const apiKeysString = apiKeys.join(',');
+    // Use one API key per request and cycle through keys on each invocation.
+    if (!apiKeys || apiKeys.length === 0) {
+        log.error('No API keys provided to runPythonBackend');
+        showNotification('ScreenSum', '❌ No API keys available');
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('processing-status', {
+                status: 'error',
+                error: 'No API keys available',
+            });
+        }
+        return;
+    }
+
+    let keyIndex = 0;
+    try {
+        keyIndex = parseInt(store.get('apiKeyIndex', 0) || 0, 10) % apiKeys.length;
+        if (Number.isNaN(keyIndex)) keyIndex = 0;
+    } catch (e) {
+        keyIndex = 0;
+    }
+
+    const chosenKey = apiKeys[keyIndex];
+
+    // Persist next index for rotation
+    try {
+        store.set('apiKeyIndex', (keyIndex + 1) % apiKeys.length);
+    } catch (e) {
+        log.warn('Failed to persist apiKeyIndex:', e);
+    }
 
     // Build args: in dev mode include script path, in production just pass args to exe
     const pythonArgs = app.isPackaged
-        ? ['--api-key', apiKeysString]
-        : [pythonScriptPath, '--api-key', apiKeysString];
+        ? ['--api-key', chosenKey]
+        : [pythonScriptPath, '--api-key', chosenKey];
 
     log.info('Starting Python backend...');
     log.info('Command:', pythonExecutable, pythonArgs);
     log.info('Python executable path:', pythonExecutable);
     log.info('App packaged?', app.isPackaged);
     log.info('Resources path:', process.resourcesPath);
-    log.info(`Using ${apiKeys.length} API keys with rotation`);
+    log.info(`Using API key index ${keyIndex} (1-per-request rotation)`);
 
     // Check if executable exists (in production mode)
     if (app.isPackaged && !fs.existsSync(pythonExecutable)) {
@@ -447,6 +474,8 @@ ipcMain.handle('save-api-keys', async (event, apiKeys) => {
 
         store.set('apiKeys', validKeys);
         store.set('apiKeyCount', validKeys.length);
+        // Reset rotation index so cycling starts from the first key
+        store.set('apiKeyIndex', 0);
 
         log.info(`Saved ${validKeys.length} API keys`);
 
@@ -520,6 +549,8 @@ ipcMain.handle('save-api-key', async (event, apiKey) => {
         }
 
         store.set('apiKeys', [validKey]);
+        // Reset rotation index for legacy single-key save
+        store.set('apiKeyIndex', 0);
         log.info('API key saved (legacy mode)');
 
         if (mainWindow && !mainWindow.isDestroyed()) {
@@ -567,6 +598,8 @@ ipcMain.handle('save-settings', (event, settings) => {
                 .map(key => String(key).trim())
                 .filter(key => key.length > 0);
             store.set('apiKeys', validKeys);
+            // Reset rotation index when keys are updated via settings
+            store.set('apiKeyIndex', 0);
         }
 
         if (settings?.model !== undefined) {
