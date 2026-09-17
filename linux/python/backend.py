@@ -38,7 +38,7 @@ except ImportError:
 
 # Default settings
 MAX_WIDTH = 800
-VISION_MODEL = "qwen/qwen3.6-27b"
+VISION_MODEL = "qwen/qwen3.8-27b"
 REQUESTS_PER_KEY = 10  # Number of requests before switching API key
 
 # File to track API key usage

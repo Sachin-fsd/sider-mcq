@@ -86,7 +86,7 @@ async function initializeStore() {
         store = new Store({
             defaults: {
                 apiKeys: [], // Changed from apiKey to apiKeys array
-                model: 'qwen/qwen3.6-27b',
+                model: 'qwen/qwen3.8-27b',
             },
         });
 
@@ -541,7 +541,7 @@ ipcMain.handle('get-settings', () => {
             apiKeys: store.get('apiKeys', []),
             model: store.get(
                 'model',
-                'qwen/qwen3.6-27b'
+                'qwen/qwen3.8-27b'
             ),
         };
     } catch (error) {
@@ -549,7 +549,7 @@ ipcMain.handle('get-settings', () => {
 
         return {
             apiKeys: [],
-            model: 'qwen/qwen3.6-27b',
+            model: 'qwen/qwen3.8-27b',
         };
     }
 });
