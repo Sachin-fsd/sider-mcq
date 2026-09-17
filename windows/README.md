@@ -8,7 +8,7 @@ An Electron app that uses AI to solve MCQ questions by analyzing screen captures
 - 🤖 **AI-Powered Answers** - Uses Groq API for fast analysis
 - 🖱️ **Cursor Movement** - Automatically moves cursor to correct answer option (A, B, C, D, E)
 - 🔐 **API Key Storage** - Securely stores your Groq API key locally
-- ⌨️ **Hotkey Support** - Press `Shift + A` to solve MCQs
+- ⌨️ **Hotkey Support** - Press `CapsLock` to solve MCQs
 
 ## System Requirements
 
