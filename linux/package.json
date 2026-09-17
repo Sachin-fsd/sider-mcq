@@ -13,7 +13,11 @@
     "dist:mac": "electron-builder --mac --x64",
     "postinstall": "node scripts/postinstall.js"
   },
-  "author": "Your Name",
+  "author": {
+    "name": "Your Name",
+    "email": "you@example.com"
+  },
+  "homepage": "https://example.com",
   "license": "MIT",
   "build": {
     "appId": "com.screensum.app",
@@ -24,6 +28,8 @@
     "files": [
       "**/*",
       "!venv/**",
+      "!.venv/**",
+      "!**/.venv/**",
       "!python/**/__pycache__",
       "!node_modules/.cache"
     ],
