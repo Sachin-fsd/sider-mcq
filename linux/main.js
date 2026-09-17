@@ -190,7 +190,7 @@ function createTray() {
         },
     ]);
 
-    tray.setToolTip('ScreenSum - Press Shift+A to solve MCQs');
+    tray.setToolTip('ScreenSum - Press CapsLock to solve MCQs');
     tray.setContextMenu(contextMenu);
 
     tray.on('double-click', () => {
@@ -203,7 +203,7 @@ function createTray() {
 
 function registerGlobalHotkey() {
     const ret = globalShortcut.register(
-        'Shift+A',
+        'CapsLock',
         () => {
             if (isProcessing) {
                 log.info('Already processing, skipping...');
@@ -250,7 +250,7 @@ function registerGlobalHotkey() {
     if (!ret) {
         log.error('Failed to register global hotkey');
     } else {
-        log.info('Global hotkey registered: Shift+A');
+        log.info('Global hotkey registered: CapsLock');
     }
 }
 

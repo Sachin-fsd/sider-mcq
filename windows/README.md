@@ -302,8 +302,8 @@ npm run dist:mac
 ### Edit Python backend settings in `python/backend.py`:
 
 ```python
-# Change AI model (default: qwen/qwen3.6-27b)
-VISION_MODEL = "qwen/qwen3.6-27b"
+# Change AI model (default: qwen/qwen3.8-27b)
+VISION_MODEL = "qwen/qwen3.8-27b"
 
 # Change screenshot max width (default: 800px)
 MAX_WIDTH = 800

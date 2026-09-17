@@ -53,7 +53,7 @@ async function initializeStore() {
         store = new Store({
             defaults: {
                 apiKeys: [], // Changed from apiKey to apiKeys array
-                model: 'qwen/qwen3.6-27b',
+                model: 'qwen/qwen3.8-27b',
             },
         });
 
@@ -157,7 +157,7 @@ function createTray() {
         },
     ]);
 
-    tray.setToolTip('ScreenSum - Press Shift+A to solve MCQs');
+    tray.setToolTip('ScreenSum - Press CapsLock to solve MCQs');
     tray.setContextMenu(contextMenu);
 
     tray.on('double-click', () => {
@@ -170,7 +170,7 @@ function createTray() {
 
 function registerGlobalHotkey() {
     const ret = globalShortcut.register(
-        'Shift+A',
+        'CapsLock',
         () => {
             if (isProcessing) {
                 log.info('Already processing, skipping...');
@@ -217,7 +217,7 @@ function registerGlobalHotkey() {
     if (!ret) {
         log.error('Failed to register global hotkey');
     } else {
-        log.info('Global hotkey registered: Shift+A');
+        log.info('Global hotkey registered: CapsLock');
     }
 }
 
@@ -578,7 +578,7 @@ ipcMain.handle('get-settings', () => {
             apiKeys: store.get('apiKeys', []),
             model: store.get(
                 'model',
-                'qwen/qwen3.6-27b'
+                'qwen/qwen3.8-27b'
             ),
         };
     } catch (error) {
@@ -586,7 +586,7 @@ ipcMain.handle('get-settings', () => {
 
         return {
             apiKeys: [],
-            model: 'qwen/qwen3.6-27b',
+            model: 'qwen/qwen3.8-27b',
         };
     }
 });

@@ -125,7 +125,7 @@ saveKeysBtn.addEventListener('click', async () => {
         setTimeout(() => {
             settingsPanel.classList.add('hidden');
             statusPanel.classList.remove('hidden');
-            statusMessage.textContent = `✅ Ready! ${result.count} keys loaded with 10 requests each. Press Shift+A to solve MCQs.`;
+            statusMessage.textContent = `✅ Ready! ${result.count} keys loaded with 10 requests each. Press CapsLock to solve MCQs.`;
         }, 1500);
     } else {
         statusMessage.textContent = `❌ Error: ${result.error || 'Failed to save API keys'}`;
@@ -175,7 +175,7 @@ api.onProcessingStatus((data) => {
         statusMessage.className = 'status-error';
     } else if (data.status === 'complete') {
         isProcessing = false;
-        statusMessage.textContent = '✅ Ready! Press Shift+A to solve MCQs.';
+        statusMessage.textContent = '✅ Ready! Press CapsLock to solve MCQs.';
         statusMessage.className = 'status-success';
     }
 });
@@ -194,6 +194,6 @@ api.getApiKeys().then((keys) => {
     if (keys && keys.length > 0) {
         settingsPanel.classList.add('hidden');
         statusPanel.classList.remove('hidden');
-        statusMessage.textContent = `✅ Ready! ${keys.length} keys loaded with 10 requests each. Press Shift+A to solve MCQs.`;
+        statusMessage.textContent = `✅ Ready! ${keys.length} keys loaded with 10 requests each. Press CapsLock to solve MCQs.`;
     }
 });
