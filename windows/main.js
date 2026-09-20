@@ -320,16 +320,32 @@ function runPythonBackend(apiKeys) {
 
     let result = '';
     let answerDetected = false;
+    let stdoutBuffer = '';
+    let rawAiResponse = '';
 
     pythonProcess.stdout.on('data', (data) => {
         const output = data.toString();
 
         result += output;
+        stdoutBuffer += output;
 
         log.info('Python output:', output.trim());
 
-        // Match ANSWER: A / B / C / D / E
-        const matches = output.match(/ANSWER:\s*([A-E])/gi);
+        const lines = stdoutBuffer.split(/\r?\n/);
+        stdoutBuffer = lines.pop() || '';
+        for (const line of lines) {
+            const rawMatch = line.match(/^AI_RAW:(.*)$/);
+            if (rawMatch) {
+                try {
+                    rawAiResponse = JSON.parse(rawMatch[1]);
+                    log.info('AI raw response:', rawAiResponse);
+                } catch (error) {
+                    log.error('Could not decode AI raw response:', error);
+                }
+            }
+        }
+
+        const matches = lines.join('\n').match(/ANSWER:\s*([A-E])/gi);
 
         if (matches && !answerDetected) {
             const match = matches[0].match(/ANSWER:\s*([A-E])/i);
@@ -351,6 +367,7 @@ function runPythonBackend(apiKeys) {
                         'answer-result',
                         {
                             answer,
+                            aiResponse: rawAiResponse,
                             raw: result,
                         }
                     );

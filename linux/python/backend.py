@@ -184,12 +184,12 @@ def capture_screen_base64():
         raise
 
 
-def summarize_screen(image_b64, api_key):
+def summarize_screen(image_b64, api_key, model):
     """Send to Groq and get answer"""
     client = Groq(api_key=api_key)
     
     completion = client.chat.completions.create(
-        model=VISION_MODEL,
+        model=model,
         messages=[
             {
                 "role": "user",
@@ -197,13 +197,12 @@ def summarize_screen(image_b64, api_key):
                     {
                         "type": "text",
                         "text": (
-                            "Look at this image. If there's a multiple choice question:\n"
-                            "1. IGNORE any green highlights, mouse cursors, or user selections\n"
-                            "2. Find the CORRECT answer mathematically\n"
-                            "3. OUTPUT ONLY: A, B, C, D, or E\n"
-                            "4. If no MCQ, output: NO MCQ\n"
-                            "5. CRITICAL: Do NOT use <think> tags. Do NOT show reasoning.\n"
-                            "6. Your ENTIRE response must be just one letter: A, B, C, D, or E"
+                            "Read the question and every answer option in this image carefully..\n"
+                            "If image shows multiple questions, focus only on the first one from top to bottom.\n"
+                            "Ignore green highlights, mouse cursors, and existing selections.\n"
+                            "Solve the question, check your work against all visible options, and then choose the correct option.\n"
+                            "If there is no multiple-choice question, respond exactly: NO MCQ\n"
+                            "Otherwise, end your response with exactly FINAL: A, FINAL: B, FINAL: C, FINAL: D, or FINAL: E."
                         )
                     },
                     {
@@ -223,22 +222,26 @@ def summarize_screen(image_b64, api_key):
 
 
 def parse_response(response):
-    """Parse AI response - look for answer at the END"""
-    response = response.strip()
-    
-    if "NO MCQ" in response.upper():
+    """Parse only an explicit final marker or an exact one-letter response."""
+    normalized = response.strip().upper()
+
+    if normalized == "NO MCQ":
         return None
-    
-    matches = re.findall(r'\b([ABCDE])\b', response.upper())
-    if matches:
-        return matches[-1]
-    
+
+    final_match = re.search(r"FINAL\s*:\s*([ABCDE])\b", normalized)
+    if final_match:
+        return final_match.group(1)
+
+    if re.fullmatch(r"[ABCDE]", normalized):
+        return normalized
+
     return None
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--api-key', required=True, help='Groq API key (comma-separated for multiple keys)')
+    parser.add_argument('--model', default=VISION_MODEL, help='Vision model to use')
     parser.add_argument('--reset-usage', action='store_true', help='Reset API usage counter')
     args = parser.parse_args()
     
@@ -271,10 +274,12 @@ def main():
         
         # Get answer from AI
         print("ANALYZING", file=sys.stderr)
-        response = summarize_screen(image_b64, current_api_key)
+        response = summarize_screen(image_b64, current_api_key, args.model)
+        # print(f"AI_RAW:{json.dumps(response, ensure_ascii=True)}")
         
         # Parse answer
         answer = parse_response(response)
+        # print(f"PARSED:{answer or 'NO_MCQ'}")
         
         if answer:
             print(f"ANSWER:{answer}")

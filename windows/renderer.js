@@ -7,6 +7,7 @@ const statusPanel = document.getElementById('status-panel');
 const statusMessage = document.getElementById('status-message');
 const resultArea = document.getElementById('result-area');
 const answerDisplay = document.getElementById('answer-display');
+const aiResponseDisplay = document.getElementById('ai-response-display');
 const apiKeysContainer = document.getElementById('api-keys-container');
 const addKeyBtn = document.getElementById('add-key-btn');
 const saveKeysBtn = document.getElementById('save-keys-btn');
@@ -149,6 +150,7 @@ closeResultBtn.addEventListener('click', () => {
     resultArea.classList.add('hidden');
     answerDisplay.textContent = '-';
     answerDisplay.className = 'answer-box';
+    aiResponseDisplay.textContent = '-';
 });
 
 // Listen for answer results
@@ -159,6 +161,7 @@ api.onAnswerResult((data) => {
 
     answerDisplay.textContent = data.answer || 'No answer found';
     answerDisplay.className = 'answer-box answered';
+    aiResponseDisplay.textContent = data.aiResponse || 'No response received';
     resultArea.classList.remove('hidden');
 });
 
