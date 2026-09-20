@@ -4,3 +4,4 @@ dist
 python/build
 python/build-venv
 python/backend
+python/__pycache__
